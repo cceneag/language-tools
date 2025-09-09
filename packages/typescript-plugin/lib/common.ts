@@ -27,14 +27,12 @@ export function createVueLanguageServiceProxy<T>(
 
 	return new Proxy(languageService, {
 		get(target, p, receiver) {
-			if (getProxyMethod) {
-				if (!proxyCache.has(p)) {
-					proxyCache.set(p, getProxyMethod(target, p));
-				}
-				const proxyMethod = proxyCache.get(p);
-				if (proxyMethod) {
-					return proxyMethod;
-				}
+			if (!proxyCache.has(p)) {
+				proxyCache.set(p, getProxyMethod(target, p));
+			}
+			const proxyMethod = proxyCache.get(p);
+			if (proxyMethod) {
+				return proxyMethod;
 			}
 			return Reflect.get(target, p, receiver);
 		},
@@ -70,10 +68,12 @@ function getCompletionsAtPosition<T>(
 					root.sfc.template,
 					...root.sfc.styles,
 				];
-				const ranges = blocks.filter(Boolean).map(block => [
-					block!.startTagEnd,
-					block!.endTagStart,
-				]);
+				const ranges = blocks.filter(Boolean).map(block =>
+					[
+						block!.startTagEnd,
+						block!.endTagStart,
+					] as const
+				);
 
 				if (ranges.some(([start, end]) => position >= start && position <= end)) {
 					const globalKinds = new Set(['var', 'function', 'module']);

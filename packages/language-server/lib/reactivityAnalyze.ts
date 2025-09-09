@@ -41,11 +41,9 @@ export function analyze(
 	if (!signal) {
 		return;
 	}
+	const dependencies = findDependencies(signal);
 	const subscribers = signal.bindingInfo
 		? findSubscribers(signal.bindingInfo.name, signal.bindingInfo.trackKinds)
-		: [];
-	const dependencies = signal
-		? findDependencies(signal)
 		: [];
 
 	if (
@@ -196,7 +194,7 @@ export function analyze(
 							else if (trackKind === TrackKind.AccessDotValue) {
 								match = dotValueAccesses.has(reference2.textSpan.start + reference2.textSpan.length);
 							}
-							else if (trackKind === TrackKind.Call) {
+							else {
 								match = functionCalls.has(reference2.textSpan.start + reference2.textSpan.length);
 							}
 							if (match) {
@@ -222,14 +220,14 @@ export function analyze(
 		return result;
 	}
 
-	function findSignalByNamePosition(position: number) {
+	function findSignalByNamePosition(position: number): SignalNode | undefined {
 		return signals.find(ref =>
 			ref.bindingInfo && ref.bindingInfo.name.getStart(sourceFile) <= position
 			&& ref.bindingInfo.name.getEnd() >= position
 		);
 	}
 
-	function findEffectByEffectHandlerPosition(position: number) {
+	function findEffectByEffectHandlerPosition(position: number): SignalNode | undefined {
 		return signals.filter(ref =>
 			ref.sideEffectInfo && ref.sideEffectInfo.handler.getStart(sourceFile) <= position
 			&& ref.sideEffectInfo.handler.getEnd() >= position
@@ -238,7 +236,7 @@ export function analyze(
 		)[0];
 	}
 
-	function findEffectByDepsHandlerPosition(position: number) {
+	function findEffectByDepsHandlerPosition(position: number): SignalNode | undefined {
 		return signals.filter(ref =>
 			ref.trackInfo && ref.trackInfo.depsHandler.getStart(sourceFile) <= position
 			&& ref.trackInfo.depsHandler.getEnd() >= position
@@ -346,7 +344,7 @@ function collect(ts: typeof import('typescript'), sourceFile: ts.SourceFile) {
 			const call = node;
 			const callName = node.expression.escapedText as string;
 			if ((callName === 'effect' || callName === 'watchEffect') && call.arguments.length) {
-				const callback = call.arguments[0];
+				const callback = call.arguments[0]!;
 				if (ts.isArrowFunction(callback) || ts.isFunctionExpression(callback)) {
 					signals.push({
 						trackInfo: {
@@ -361,8 +359,8 @@ function collect(ts: typeof import('typescript'), sourceFile: ts.SourceFile) {
 				}
 			}
 			if (callName === 'watch' && call.arguments.length >= 2) {
-				const depsCallback = call.arguments[0];
-				const effectCallback = call.arguments[1];
+				const depsCallback = call.arguments[0]!;
+				const effectCallback = call.arguments[1]!;
 				if (ts.isArrowFunction(effectCallback) || ts.isFunctionExpression(effectCallback)) {
 					if (ts.isArrowFunction(depsCallback) || ts.isFunctionExpression(depsCallback)) {
 						signals.push({
@@ -406,7 +404,7 @@ function collect(ts: typeof import('typescript'), sourceFile: ts.SourceFile) {
 				});
 			}
 			else if ((callName === 'computed' || hyphenateAttr(callName).endsWith('-computed')) && call.arguments.length) {
-				const arg = call.arguments[0];
+				const arg = call.arguments[0]!;
 				if (ts.isArrowFunction(arg) || ts.isFunctionExpression(arg)) {
 					signals.push({
 						bindingInfo: ts.isVariableDeclaration(call.parent)

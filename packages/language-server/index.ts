@@ -129,8 +129,8 @@ connection.onInitialize(params => {
 			getImportPathForFile(...args) {
 				return sendTsServerRequest('_vue:getImportPathForFile', args);
 			},
-			getPropertiesAtLocation(...args) {
-				return sendTsServerRequest('_vue:getPropertiesAtLocation', args);
+			isRefAtLocation(...args) {
+				return sendTsServerRequest('_vue:isRefAtLocation', args);
 			},
 			getDocumentHighlights(fileName, position) {
 				return sendTsServerRequest(
@@ -219,32 +219,30 @@ connection.onRequest('vue/interpolationRanges', async (params: {
 }): Promise<[number, number][]> => {
 	const uri = URI.parse(params.textDocument.uri);
 	const languageService = await server.project.getLanguageService(uri);
-	if (languageService) {
-		const sourceFile = languageService.context.language.scripts.get(uri);
-		if (sourceFile?.generated) {
-			const ranges: [number, number][] = [];
-			for (const code of forEachEmbeddedCode(sourceFile.generated.root)) {
-				const codeText = code.snapshot.getText(0, code.snapshot.getLength());
-				if (
-					(
-						code.id.startsWith('template_inline_ts_')
-						&& codeText.startsWith('0 +')
-						&& codeText.endsWith('+ 0;')
-					)
-					|| (code.id.startsWith('style_') && code.id.endsWith('_inline_ts'))
-				) {
-					for (const mapping of code.mappings) {
-						for (let i = 0; i < mapping.sourceOffsets.length; i++) {
-							ranges.push([
-								mapping.sourceOffsets[i],
-								mapping.sourceOffsets[i] + mapping.lengths[i],
-							]);
-						}
+	const sourceFile = languageService.context.language.scripts.get(uri);
+	if (sourceFile?.generated) {
+		const ranges: [number, number][] = [];
+		for (const code of forEachEmbeddedCode(sourceFile.generated.root)) {
+			const codeText = code.snapshot.getText(0, code.snapshot.getLength());
+			if (
+				(
+					code.id.startsWith('template_inline_ts_')
+					&& codeText.startsWith('0 +')
+					&& codeText.endsWith('+ 0;')
+				)
+				|| (code.id.startsWith('style_') && code.id.endsWith('_inline_ts'))
+			) {
+				for (const mapping of code.mappings) {
+					for (let i = 0; i < mapping.sourceOffsets.length; i++) {
+						ranges.push([
+							mapping.sourceOffsets[i]!,
+							mapping.sourceOffsets[i]! + mapping.lengths[i]!,
+						]);
 					}
 				}
 			}
-			return ranges;
 		}
+		return ranges;
 	}
 	return [];
 });
@@ -344,8 +342,8 @@ connection.onRequest('vue/reactivityAnalyze', async (params: {
 			let end = document.positionAt(dependency.getEnd());
 			if (ts.isBlock(dependency) && dependency.statements.length) {
 				const { statements } = dependency;
-				start = document.positionAt(statements[0].getStart(result.sourceFile));
-				end = document.positionAt(statements[statements.length - 1].getEnd());
+				start = document.positionAt(statements[0]!.getStart(result.sourceFile));
+				end = document.positionAt(statements[statements.length - 1]!.getEnd());
 			}
 			const sourceRange = getSourceRange(docs, { start, end });
 			if (sourceRange) {
@@ -360,8 +358,8 @@ connection.onRequest('vue/reactivityAnalyze', async (params: {
 			let end = document.positionAt(subscriber.sideEffectInfo.handler.getEnd());
 			if (ts.isBlock(subscriber.sideEffectInfo.handler) && subscriber.sideEffectInfo.handler.statements.length) {
 				const { statements } = subscriber.sideEffectInfo.handler;
-				start = document.positionAt(statements[0].getStart(result.sourceFile));
-				end = document.positionAt(statements[statements.length - 1].getEnd());
+				start = document.positionAt(statements[0]!.getStart(result.sourceFile));
+				end = document.positionAt(statements[statements.length - 1]!.getEnd());
 			}
 			const sourceRange = getSourceRange(docs, { start, end });
 			if (sourceRange) {
@@ -375,8 +373,8 @@ connection.onRequest('vue/reactivityAnalyze', async (params: {
 			let end = document.positionAt(dependency.getEnd());
 			if (ts.isBlock(dependency) && dependency.statements.length) {
 				const { statements } = dependency;
-				start = document.positionAt(statements[0].getStart(result.sourceFile));
-				end = document.positionAt(statements[statements.length - 1].getEnd());
+				start = document.positionAt(statements[0]!.getStart(result.sourceFile));
+				end = document.positionAt(statements[statements.length - 1]!.getEnd());
 			}
 			dependencies.push({ start, end });
 		}
@@ -388,8 +386,8 @@ connection.onRequest('vue/reactivityAnalyze', async (params: {
 			let end = document.positionAt(subscriber.sideEffectInfo.handler.getEnd());
 			if (ts.isBlock(subscriber.sideEffectInfo.handler) && subscriber.sideEffectInfo.handler.statements.length) {
 				const { statements } = subscriber.sideEffectInfo.handler;
-				start = document.positionAt(statements[0].getStart(result.sourceFile));
-				end = document.positionAt(statements[statements.length - 1].getEnd());
+				start = document.positionAt(statements[0]!.getStart(result.sourceFile));
+				end = document.positionAt(statements[statements.length - 1]!.getEnd());
 			}
 			subscribers.push({ start, end });
 		}
